@@ -1,0 +1,6 @@
+{
+  "name": "校淘淘 - 麦和二手担保面交平台",
+  "description": "基于 React、TypeScript 与 Tailwind CSS 搭建的高保真校园二手交易平台官方网站（校淘淘 / CampusTrade）。整合了教务认证、宿舍网点面交、平台担保金托管、聊天会话风控、求助大喇叭以及数据看板等完整要素。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
