@@ -5,98 +5,181 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-/* Base Body Style for the Deep Glass Dark Theme */
+/* Base Body Style with Transitions supporting Light and Dark modes */
+:root {
+  --bg-main: #f1f5f9;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(148, 163, 184, 0.16);
+  --glass-shadow: 0 8px 32px 0 rgba(148, 163, 184, 0.12);
+  
+  --glass-sub-bg: rgba(15, 23, 42, 0.03);
+  --glass-sub-border: rgba(15, 23, 42, 0.05);
+  
+  --input-bg: rgba(255, 255, 255, 0.8);
+  --input-border: rgba(148, 163, 184, 0.25);
+  
+  --text-contrast: #0f172a;
+}
+
+.dark {
+  --bg-main: #0a0f1d;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  
+  --glass-bg: rgba(15, 23, 42, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  
+  --glass-sub-bg: rgba(255, 255, 255, 0.03);
+  --glass-sub-border: rgba(255, 255, 255, 0.07);
+  
+  --input-bg: rgba(15, 23, 42, 0.5);
+  --input-border: rgba(255, 255, 255, 0.12);
+  
+  --text-contrast: #ffffff;
+}
+
 body {
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--bg-main);
+  color: var(--text-main);
   font-family: var(--font-sans);
   position: relative;
   min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Mesh Background Layer */
-.mesh-bg {
+/* Ambient Radial Blur Circles in background */
+.ambient-bg {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   z-index: -1;
-  background: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.6) 0, transparent 50%),
-              radial-gradient(at 50% 0%, rgba(88, 28, 135, 0.6) 0, transparent 50%),
-              radial-gradient(at 100% 0%, rgba(190, 24, 93, 0.5) 0, transparent 50%),
-              radial-gradient(at 100% 100%, rgba(30, 58, 138, 0.6) 0, transparent 50%),
-              radial-gradient(at 0% 100%, rgba(17, 24, 39, 1) 0, transparent 50%);
+  pointer-events: none;
+  background-color: var(--bg-main);
+  transition: background-color 0.3s ease;
 }
 
-/* Standard Glass Panel Container */
+/* Light mode ambient circles */
+.ambient-bg::before {
+  content: "";
+  position: absolute;
+  top: -10%;
+  left: -10%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 65%);
+  filter: blur(80px);
+}
+.ambient-bg::after {
+  content: "";
+  position: absolute;
+  bottom: -10%;
+  right: -10%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 65%);
+  filter: blur(80px);
+}
+
+/* Dark mode overrides for ambient background */
+.dark .ambient-bg {
+  background: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.35) 0, transparent 50%),
+              radial-gradient(at 50% 0%, rgba(88, 28, 135, 0.3) 0, transparent 50%),
+              radial-gradient(at 100% 0%, rgba(190, 24, 93, 0.2) 0, transparent 50%),
+              radial-gradient(at 100% 100%, rgba(17, 24, 39, 1) 0, transparent 60%);
+}
+
+/* Frosted Glass Panels */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.4);
+  background: var(--glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  color: #f8fafc;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Extra Translucent panel ideal for lists and nested subpanels */
 .glass-panel-sub {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-sub-bg);
+  border: 1px solid var(--glass-sub-border);
 }
 
 .glass-panel-hover {
   transition: all 0.2s ease-in-out;
 }
 .glass-panel-hover:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.15);
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 12px 36px 0 rgba(99, 102, 241, 0.1);
+}
+.dark .glass-panel-hover:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(139, 92, 246, 0.25);
+  box-shadow: 0 12px 36px 0 rgba(139, 92, 246, 0.15);
 }
 
-/* Buttons with frosted neon feel */
+/* Buttons and Controls styling */
 .glass-btn-primary {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.8) 0%, rgba(139, 92, 246, 0.8) 100%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
   transition: all 0.2s ease-in-out;
 }
 .glass-btn-primary:hover {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 1) 0%, rgba(139, 92, 246, 1) 100%);
+  background: linear-gradient(135deg, rgb(79, 70, 229) 0%, rgb(124, 58, 237) 100%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
 }
 
 .glass-btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: var(--text-main);
   transition: all 0.2s ease;
 }
+.dark .glass-btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+}
 .glass-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+.dark .glass-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  color: #ffffff;
 }
 
-/* Class presets for charts and indicators */
-.chart-bar-glass {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Beautiful custom glassy scrollbar */
+/* Global scrollbar rules */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+}
+.dark ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.1);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(148, 163, 184, 0.3);
   border-radius: 3px;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(148, 163, 184, 0.5);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }

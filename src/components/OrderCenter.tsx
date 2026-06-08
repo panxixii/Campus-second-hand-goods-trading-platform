@@ -171,8 +171,14 @@ export default function OrderCenter({
                       <h4 className="text-sm font-bold text-white line-clamp-1">
                         {ord.productTitle}
                       </h4>
-                      <p className="text-xs text-slate-400">
-                        购买成交价：<strong className="text-emerald-400 text-sm">¥{ord.productPrice}</strong> 元
+                      <p className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                        <span>购买成交价：</span>
+                        <strong className="text-emerald-450 dark:text-emerald-400 text-sm">¥{ord.productPrice}</strong>
+                        {ord.couponCode && (
+                          <span className="text-[9px] bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-550/20 px-1.5 py-0.2 rounded font-mono font-bold shrink-0">
+                            🎫 已叠加 {ord.couponCode} (折减-¥{ord.couponDiscount}元)
+                          </span>
+                        )}
                       </p>
                       {ord.buyerMemo && (
                         <p className="text-[10px] text-indigo-300 italic">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Product } from '../types';
+import { Product, UserAccount, Announcement } from '../types';
 import { 
   Search, 
   MapPin, 
@@ -20,21 +20,74 @@ import {
 } from 'lucide-react';
 
 interface MarketplaceProps {
+  currentUser?: UserAccount | null;
   products: Product[];
   onAddProduct: (product: Product) => void;
   onSelectProductForChat: (product: Product) => void;
-  onBuyProduct: (product: Product, memo: string, address: string) => void;
+  onBuyProduct: (product: Product, memo: string, address: string, couponId?: string) => void;
   activeSearchQuery: string;
   setActiveSearchQuery: (q: string) => void;
+  favorites?: string[];
+  onToggleFavorite?: (prodId: string) => void;
+  onAddBrowsingHistory?: (prodId: string) => void;
+  announcements?: Announcement[];
+  onDeleteAnnouncement?: (id: string) => void;
+  coupons?: any[];
+}
+
+// Subcomponent for precise, high-performance visual countdown to prevent parent-level re-renders
+export function FlashSaleTimer({ endTime }: { endTime: string }) {
+  const [secLeft, setSecLeft] = useState<number>(0);
+
+  useEffect(() => {
+    const calculateSeconds = () => {
+      const diff = new Date(endTime).getTime() - Date.now();
+      return diff > 0 ? Math.floor(diff / 1000) : 0;
+    };
+
+    setSecLeft(calculateSeconds());
+    const interval = setInterval(() => {
+      const left = calculateSeconds();
+      setSecLeft(left);
+      if (left <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [endTime]);
+
+  if (secLeft <= 0) {
+    return <span className="text-slate-500 font-bold dark:text-slate-400">⚡ 特惠已结单</span>;
+  }
+
+  const h = Math.floor(secLeft / 3600);
+  const m = Math.floor((secLeft % 3600) / 60);
+  const s = secLeft % 60;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  return (
+    <span className="font-mono text-rose-600 dark:text-rose-400 font-extrabold flex items-center gap-0.5 animate-pulse bg-rose-500/10 px-1.5 py-0.5 rounded">
+      ⏳ {pad(h)}:{pad(m)}:{pad(s)}
+    </span>
+  );
 }
 
 export default function Marketplace({
+  currentUser,
   products,
   onAddProduct,
   onSelectProductForChat,
   onBuyProduct,
   activeSearchQuery,
-  setActiveSearchQuery
+  setActiveSearchQuery,
+  favorites = [],
+  onToggleFavorite,
+  onAddBrowsingHistory,
+  announcements = [],
+  onDeleteAnnouncement,
+  coupons = []
 }: MarketplaceProps) {
   // Category tab state
   const [activeCategory, setActiveCategory] = useState<string>('全部');
@@ -54,6 +107,7 @@ export default function Marketplace({
   const [isBuying, setIsBuying] = useState(false);
   const [buyerMemo, setBuyerMemo] = useState('');
   const [buyerAddress, setBuyerAddress] = useState('中苑5号楼-302室');
+  const [selectedCouponId, setSelectedCouponId] = useState<string>('');
 
   // Real-time Countdown timer for flash sales (req-50)
   const [timeLeft, setTimeLeft] = useState({ hours: 14, minutes: 32, seconds: 45 });
@@ -87,6 +141,11 @@ export default function Marketplace({
   const [tbSyllabus, setTbSyllabus] = useState('');
   const [tbNature, setTbNature] = useState('专业必修课');
 
+  // Flash Sale configuration state for uploading products (seller perspective)
+  const [isPublishFlashSale, setIsPublishFlashSale] = useState(false);
+  const [publishFlashSalePrice, setPublishFlashSalePrice] = useState('');
+  const [publishFlashSaleDuration, setPublishFlashSaleDuration] = useState('2');
+
   const addSearchFootprint = (q: string) => {
     if (!q.trim()) return;
     setSearchHistory(prev => {
@@ -118,6 +177,10 @@ export default function Marketplace({
       '其它闲置': 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=600&q=80'
     };
 
+    const isFlashSale = isPublishFlashSale;
+    const flashSalePrice = isPublishFlashSale ? parseFloat(publishFlashSalePrice) || (priceNum * 0.9) : undefined;
+    const flashSaleEndTime = isPublishFlashSale ? new Date(Date.now() + parseFloat(publishFlashSaleDuration) * 60 * 60 * 1000).toISOString() : undefined;
+
     const added: Product = {
       id: `prod-${Date.now()}`,
       title: newTitle,
@@ -126,11 +189,11 @@ export default function Marketplace({
       originalPrice: origPriceNum,
       category: newCategory,
       imageUrl: newImageUrl || imgPlaceholders[newCategory] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80',
-      sellerName: '我 (当前学生)',
-      sellerAvatar: 'ME',
+      sellerName: currentUser ? currentUser.username : '潘茜茜',
+      sellerAvatar: currentUser ? currentUser.username[0] : 'P',
       sellerRating: 100,
-      campus: '南校区(主校区)',
-      dormitory: newDorm,
+      campus: currentUser ? currentUser.campus : '南校区(主校区)',
+      dormitory: newDorm || (currentUser ? currentUser.dorm : '中苑5号楼302'),
       isVerifiedSeller: true,
       tags: newTagsString.split(',').map(t => t.trim()).filter(Boolean),
       postDate: new Date().toISOString().split('T')[0],
@@ -140,11 +203,19 @@ export default function Marketplace({
         schoolSubject: tbSubject || '未指定科目',
         syllabusVersion: tbSyllabus || '通用编写版',
         courseNature: tbNature
-      } : undefined
+      } : undefined,
+      isFlashSale,
+      flashSalePrice,
+      flashSaleEndTime
     };
 
     onAddProduct(added);
     setIsPublishing(false);
+
+    // Reset Flash Sale states
+    setIsPublishFlashSale(false);
+    setPublishFlashSalePrice('');
+    setPublishFlashSaleDuration('2');
     
     // Reset form
     setNewTitle('');
@@ -174,6 +245,85 @@ export default function Marketplace({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+      {/* ==================== 平台公告栏公告栏 ==================== */}
+      {announcements.length > 0 && (
+        <div className="glass-panel p-4 rounded-2xl bg-slate-50 dark:bg-white/2 bg-gradient-to-r from-slate-200/20 via-slate-100/5 to-slate-200/20 dark:from-indigo-950/20 dark:via-slate-900/10 dark:to-indigo-950/20 border border-slate-300 dark:border-indigo-500/10 shadow-md space-y-3 relative overflow-hidden text-left">
+          {/* Subtle abstract background glow */}
+          <div className="absolute -top-12 -left-12 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-12 -right-12 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="flex items-center justify-between border-b border-slate-300 dark:border-white/5 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+              </span>
+              <h3 className="text-xs font-black tracking-widest text-indigo-600 dark:text-[#818cf8] uppercase flex items-center gap-1.5">
+                📢 CAMPUSTRADE 校园官方通知公告栏
+              </h3>
+            </div>
+            <span className="text-[9px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 px-1.8 py-0.5 rounded font-mono font-bold border border-indigo-500/10">
+              共 {announcements.length} 条置顶挂牌
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {announcements.map((ann) => (
+              <div 
+                key={ann.id} 
+                className={`p-3 rounded-xl border transition-all text-xs font-medium ${
+                  ann.isUrgent 
+                    ? 'bg-rose-50 dark:bg-rose-500/5 border-rose-300 dark:border-rose-500/20 hover:border-rose-400' 
+                    : 'bg-white dark:bg-white/1 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10'
+                }`}
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`px-1.5 py-0.2 rounded text-[9px] font-black ${
+                      ann.type === '系统重要防骗安全警示'
+                        ? 'bg-rose-100 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-300/30'
+                        : ann.type === '平台功能优化通知'
+                        ? 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-300/30'
+                        : ann.type === '毕业季甩货专场活动'
+                        ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-300/30'
+                        : 'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-300/30'
+                    }`}>
+                      {ann.type}
+                    </span>
+                    <strong className="text-slate-800 dark:text-white font-extrabold text-[12px]">
+                      {ann.title}
+                    </strong>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start md:self-auto text-[10px] text-slate-500 dark:text-slate-400">
+                    <span className="font-semibold shrink-0">
+                      ✍️ {ann.publisher} · {ann.publishTime ? ann.publishTime.substring(0, 16) : ''}
+                    </span>
+                    {currentUser?.role === 'admin' && onDeleteAnnouncement && (
+                      <button 
+                        onClick={() => {
+                          if (confirm('确认要在全校看板撤下/删除此官方公告吗？')) {
+                            onDeleteAnnouncement(ann.id);
+                          }
+                        }}
+                        className="text-[9px] bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white dark:text-rose-300 font-bold px-1.5 py-0.5 rounded border border-rose-500/20 transition cursor-pointer"
+                        title="超级管理员撤销此项公告"
+                      >
+                        撤销
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 select-text whitespace-pre-wrap pl-1 text-left">
+                  {ann.content}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
       {/* 1. 顶部搜索大总汇 + 热搜关键词 (req-31, req-32) */}
       <div className="glass-panel p-5 rounded-2xl flex flex-col gap-4 shadow-xl border border-white/5 relative overflow-hidden">
@@ -429,8 +579,13 @@ export default function Marketplace({
               {filteredProducts.map(prod => (
                 <div
                   key={prod.id}
-                  onClick={() => setSelectedProduct(prod)}
-                  className="glass-panel border-white/8 rounded-2xl p-3.5 hover:border-indigo-500/35 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between shadow-md"
+                  onClick={() => {
+                    setSelectedProduct(prod);
+                    if (onAddBrowsingHistory) {
+                      onAddBrowsingHistory(prod.id);
+                    }
+                  }}
+                  className="glass-panel border-white/8 rounded-2xl p-3.5 hover:border-indigo-500/35 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between shadow-md relative"
                 >
                   <div className="space-y-2.5">
                     
@@ -442,10 +597,28 @@ export default function Marketplace({
                         className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                         referrerPolicy="no-referrer"
                       />
-                      {prod.limitDiscount && (
-                        <span className="absolute top-2 right-2 bg-rose-500 hover:bg-rose-400 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+
+                      {/* Heart bookmark favorite button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          if (onToggleFavorite) onToggleFavorite(prod.id);
+                        }}
+                        className={`absolute top-2 left-2 p-1.8 rounded-full backdrop-blur-md transition-all shadow-md cursor-pointer z-20 ${
+                          favorites.includes(prod.id)
+                            ? 'bg-rose-500 text-white scale-110'
+                            : 'bg-black/55 hover:bg-black/75 text-slate-200'
+                        }`}
+                        title={favorites.includes(prod.id) ? '选定取消收藏' : '一键加入专属收藏夹'}
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${favorites.includes(prod.id) ? 'fill-current' : ''}`} />
+                      </button>
+
+                      {((prod.limitDiscount) || (prod.isFlashSale)) && (
+                        <span className="absolute top-2 right-2 bg-rose-550 border border-rose-500/30 text-white text-[9px] font-extrabold px-1.8 py-0.8 rounded-md flex items-center gap-1 shadow-sm animate-pulse">
                           <Clock className="w-2.5 h-2.5" />
-                          限时特惠
+                          限时突降特惠
                         </span>
                       )}
                       
@@ -505,9 +678,20 @@ export default function Marketplace({
 
                   {/* 价格底栏和信誉评分(req-52) */}
                   <div className="pt-3.5 mt-3 border-t border-white/5 flex items-center justify-between px-1.5">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-emerald-400 font-extrabold text-base">¥{prod.price}</span>
-                      <span className="text-slate-400 text-xs line-through font-medium">¥{prod.originalPrice}</span>
+                    <div className="flex flex-col text-left">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-emerald-400 font-extrabold text-base">
+                          ¥{prod.isFlashSale && prod.flashSalePrice ? prod.flashSalePrice : prod.price}
+                        </span>
+                        <span className="text-slate-400 text-xs line-through font-medium">
+                          ¥{prod.isFlashSale ? prod.price : prod.originalPrice}
+                        </span>
+                      </div>
+                      {prod.isFlashSale && prod.flashSaleEndTime && (
+                        <div className="text-[9px] mt-1 self-start flex items-center gap-1 scale-95 origin-left">
+                          <FlashSaleTimer endTime={prod.flashSaleEndTime} />
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5 text-[10px] text-indigo-200 font-bold bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.8 rounded-lg select-none">
@@ -624,14 +808,26 @@ export default function Marketplace({
                 </div>
 
                 {/* 价格及购买按钮 */}
-                <div className="bg-indigo-950/20 border border-indigo-500/15 rounded-2xl p-3 flex items-center justify-between">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-lg font-black text-emerald-400">¥{selectedProduct.price}</span>
-                    <span className="text-xs line-through text-slate-400">¥{selectedProduct.originalPrice}</span>
+                <div className="bg-indigo-950/20 border border-indigo-500/15 rounded-2xl p-3.5 flex items-center justify-between">
+                  <div className="flex flex-col text-left">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-base font-black text-emerald-400">
+                        ¥{selectedProduct.isFlashSale && selectedProduct.flashSalePrice ? selectedProduct.flashSalePrice : selectedProduct.price}
+                      </span>
+                      <span className="text-xs line-through text-slate-400">
+                        ¥{selectedProduct.isFlashSale ? selectedProduct.price : selectedProduct.originalPrice}
+                      </span>
+                    </div>
+                    {selectedProduct.isFlashSale && selectedProduct.flashSaleEndTime && (
+                      <div className="text-[10px] mt-1.5 flex items-center gap-1 bg-rose-500/10 p-1 rounded-md border border-rose-500/15 text-rose-300">
+                        <span className="font-bold">⚡ 秒杀倒计时:</span>
+                        <FlashSaleTimer endTime={selectedProduct.flashSaleEndTime} />
+                      </div>
+                    )}
                   </div>
                   
-                  <span className="text-[10px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">
-                    建议扫码面交
+                  <span className="text-[10px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded shrink-0 self-center">
+                    推荐线下扫码
                   </span>
                 </div>
 
@@ -674,27 +870,105 @@ export default function Marketplace({
                   </div>
                 </div>
 
-                <div className="flex gap-2 justify-end">
+                {/* 🎫 Add coupon selection list if any exist */}
+                {(() => {
+                  const currentPrice = selectedProduct.isFlashSale && selectedProduct.flashSalePrice 
+                    ? selectedProduct.flashSalePrice 
+                    : selectedProduct.price;
+
+                  const eligibleCoupons = coupons.filter(c => {
+                    if (!currentUser) return false;
+                    if (c.isUsed) return false;
+                    if (c.targetUser !== '所有人' && c.targetUser !== currentUser.username) return false;
+                    return currentPrice >= c.minSpend;
+                  });
+
+                  if (eligibleCoupons.length === 0) return null;
+
+                  return (
+                    <div className="bg-amber-500/5 border border-amber-500/20 p-2.5 rounded-xl text-xs space-y-1 text-left">
+                      <label className="text-amber-400 font-bold block mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1">🎫 选择适用的校园特设优惠券:</span>
+                        <span className="bg-amber-500/20 text-amber-300 font-extrabold px-1.5 py-0.2 rounded-full text-[9px] uppercase">
+                          特权加码 (省 ¥)
+                        </span>
+                      </label>
+                      <select
+                        value={selectedCouponId}
+                        onChange={(e) => setSelectedCouponId(e.target.value)}
+                        className="w-full bg-slate-900 border border-amber-500/20 rounded-lg p-2 text-amber-300 font-extrabold cursor-pointer border-dashed outline-none"
+                      >
+                        <option value="">🚫 不叠加并扣减代金券 (全款支付)</option>
+                        {eligibleCoupons.map(c => (
+                          <option key={c.id} value={c.id}>
+                            🏷️ [{c.code}] - {c.title} (立减 ¥{c.discountAmount}，门槛满 ¥{c.minSpend} 可用)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })()}
+
+                <div className="flex gap-2 justify-end items-center">
+                  {/* Cancel button */}
                   <button 
-                    onClick={() => setIsBuying(false)}
+                    type="button"
+                    onClick={() => {
+                      setIsBuying(false);
+                      setSelectedCouponId('');
+                    }}
                     className="px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 text-xs font-semibold cursor-pointer"
                   >
-                    再想想
+                    取消
                   </button>
-                  <button 
-                    onClick={() => {
-                      onBuyProduct(selectedProduct, buyerMemo, buyerAddress);
-                      setSelectedProduct(null);
-                      setIsBuying(false);
-                    }}
-                    className="px-4 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-500/20 hover:bg-emerald-600 cursor-pointer"
-                  >
-                    立即付 ¥{selectedProduct.price} 并托管
-                  </button>
+
+                  {/* Payment button */}
+                  {(() => {
+                    const currentPrice = selectedProduct.isFlashSale && selectedProduct.flashSalePrice 
+                      ? selectedProduct.flashSalePrice 
+                      : selectedProduct.price;
+
+                    const activeCoupon = coupons.find(c => c.id === selectedCouponId);
+                    const discount = activeCoupon ? activeCoupon.discountAmount : 0;
+                    const finalDisplayPrice = Math.max(0, currentPrice - discount);
+
+                    return (
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          onBuyProduct(selectedProduct, buyerMemo, buyerAddress, selectedCouponId || undefined);
+                          setSelectedProduct(null);
+                          setIsBuying(false);
+                          setSelectedCouponId('');
+                        }}
+                        className="px-4 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-500/20 hover:bg-emerald-600 cursor-pointer flex items-center gap-1.5"
+                      >
+                        {discount > 0 && (
+                          <span className="text-[10px] line-through text-emerald-200/60 mr-0.5">
+                            ¥{currentPrice}
+                          </span>
+                        )}
+                        <span>立即付 ¥{finalDisplayPrice} 托管</span>
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3.5 pt-2">
+              <div className="flex items-center gap-2.5 pt-2">
+                <button
+                  onClick={() => onToggleFavorite ? onToggleFavorite(selectedProduct.id) : null}
+                  className={`px-3 py-3 border rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 ${
+                    favorites.includes(selectedProduct.id)
+                      ? 'bg-rose-500/30 border-rose-500/50 text-rose-300 hover:bg-rose-500/40'
+                      : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
+                  }`}
+                  title={favorites.includes(selectedProduct.id) ? '取消从收藏夹中移出' : '加入至我的收藏夹中'}
+                >
+                  <Heart className={`w-4 h-4 ${favorites.includes(selectedProduct.id) ? 'fill-current text-rose-500' : ''}`} />
+                  <span>{favorites.includes(selectedProduct.id) ? '已收藏' : '收藏'}</span>
+                </button>
+
                 <button
                   onClick={() => onSelectProductForChat(selectedProduct)}
                   className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 text-indigo-300 transition cursor-pointer"
@@ -846,39 +1120,162 @@ export default function Marketplace({
                 </div>
               )}
 
+              {/* 限时秒杀特惠降价选项 (req-50) */}
+              <div className="bg-rose-950/15 border border-rose-500/25 p-3.5 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                    开启本件商品「限时价格大跌降价」引流秒杀
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={isPublishFlashSale}
+                    onChange={(e) => setIsPublishFlashSale(e.target.checked)}
+                    className="w-4 h-4 rounded text-rose-500 cursor-pointer"
+                  />
+                </div>
+
+                {isPublishFlashSale && (
+                  <div className="grid grid-cols-2 gap-4 text-xs animate-preset-slide-down">
+                    <div>
+                      <label className="text-slate-300 font-semibold block mb-1">降价后极限神仙低价 (¥)</label>
+                      <input
+                        type="number"
+                        required
+                        value={publishFlashSalePrice}
+                        onChange={(e) => setPublishFlashSalePrice(e.target.value)}
+                        placeholder="需低于普通售价"
+                        className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-slate-300 font-semibold block mb-1">促销特价持续生效时长(小时)</label>
+                      <select
+                        value={publishFlashSaleDuration}
+                        onChange={(e) => setPublishFlashSaleDuration(e.target.value)}
+                        className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-white font-bold cursor-pointer"
+                      >
+                        <option value="0.5">0.5 小时 (半小时极速促)</option>
+                        <option value="1">1 小时 (精选爆单倒计时)</option>
+                        <option value="2">2 小时 (推荐引流速推)</option>
+                        <option value="6">6 小时 (黄金回血半夜档)</option>
+                        <option value="12">12 小时 (半日秒杀生效)</option>
+                        <option value="24">24 小时 (整日降价出清)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 图片上传选择 */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-white/5 dark:bg-[#0f172a]/20 border border-slate-200 dark:border-white/5 text-left">
+                <label className="text-slate-600 dark:text-slate-300 font-bold block text-xs">
+                  📸 上传宝贝实物图片 (支持本地文件或一键精选配图)
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  
+                  {/* File Upload drag-and-drop / selector zone */}
+                  <div className="border border-dashed border-slate-300 dark:border-white/20 rounded-xl p-3 text-center cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-400/50 hover:bg-slate-500/5 transition relative flex flex-col items-center justify-center min-h-[90px]">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setNewImageUrl(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                    />
+                    {newImageUrl ? (
+                      <div className="relative w-full h-16">
+                        <img
+                          src={newImageUrl}
+                          alt="Uploaded product img"
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setNewImageUrl('');
+                          }}
+                          className="absolute -top-1 -right-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-0.5 text-[9px] w-4 h-4 flex items-center justify-center font-bold z-20"
+                        >
+                          X
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="text-[11px] text-indigo-600 dark:text-indigo-300 font-bold">📂 点击或拖动本地实物图</div>
+                        <div className="text-[9px] text-slate-400">支持 PNG/JPG 大四自提图</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preloaded quick assets for rapid testing */}
+                  <div className="p-2 py-0.5 flex flex-col justify-center space-y-1 select-none">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold text-left">✨ 快捷测试宝贝配图：</span>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { name: '📚 课本真题', url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80' },
+                        { name: '🚲 折叠单车', url: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=400&q=80' },
+                        { name: '💻 科技单品', url: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80' },
+                        { name: '👔 日常穿搭', url: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=400&q=80' }
+                      ].map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setNewImageUrl(preset.url)}
+                          className="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-400/20 px-1.5 py-0.8 rounded text-[9px] font-bold cursor-pointer transition shrink-0"
+                        >
+                          {preset.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
               {/* 货源物理位置和图片选填 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-bold block">物理交货楼宇</label>
+                <div className="space-y-1 text-left">
+                  <label className="text-slate-600 dark:text-slate-300 font-bold block text-xs">物理交货楼宇</label>
                   <input
                     type="text"
                     value={newDorm}
                     onChange={(e) => setNewDorm(e.target.value)}
                     placeholder="比如 榕园4号楼 / 中苑2门"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white"
+                    className="w-full bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-800 dark:text-white text-xs"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-bold block">标签列表 (逗号分隔)</label>
+                <div className="space-y-1 text-left">
+                  <label className="text-slate-600 dark:text-slate-300 font-bold block text-xs">标签列表 (逗号分隔)</label>
                   <input
                     type="text"
                     value={newTagsString}
                     onChange={(e) => setNewTagsString(e.target.value)}
                     placeholder="e.g. 接受自提, 可小刀, 大四甩卖"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white"
+                    className="w-full bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-800 dark:text-white text-xs"
                   />
                 </div>
               </div>
 
               {/* 详细描述 */}
-              <div className="space-y-1">
-                <label className="text-slate-300 font-bold block">货品成色与交易细节描述</label>
+              <div className="space-y-1 text-left">
+                <label className="text-slate-600 dark:text-slate-300 font-bold block text-xs">货品成色与交易细节描述</label>
                 <textarea
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="请输入描述，比如新旧程度，配件是否齐全，具体在宿舍什么地方交易..."
                   rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white"
+                  className="w-full bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-800 dark:text-white text-xs"
                 />
               </div>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ModerationTicket } from '../types';
+import { ModerationTicket, Announcement } from '../types';
 import { SENSITIVE_WORDS } from '../data';
 import { 
   BarChart, 
@@ -30,23 +30,114 @@ import {
   Search,
   CheckCircle2,
   Trash2,
-  Lock
+  Lock,
+  PlusCircle,
+  Megaphone,
+  Award
 } from 'lucide-react';
 
 interface AdminProps {
   tickets: ModerationTicket[];
   onTickDismiss: (id: string, action: 'block' | 'dismiss') => void;
   onAddTicket: (ticket: ModerationTicket) => void;
+  announcements?: Announcement[];
+  onAddAnnouncement?: (ann: Announcement) => void;
+  onDeleteAnnouncement?: (id: string) => void;
+  coupons?: any[];
+  onAddCoupon?: (coup: any) => void;
+  onDeleteCoupon?: (id: string) => void;
+  users?: any[];
 }
 
 export default function AdminPanel({
   tickets,
   onTickDismiss,
-  onAddTicket
+  onAddTicket,
+  announcements = [],
+  onAddAnnouncement,
+  onDeleteAnnouncement,
+  coupons = [],
+  onAddCoupon,
+  onDeleteCoupon,
+  users = []
 }: AdminProps) {
   // Simulator text input
   const [testContent, setTestContent] = useState('');
   const [filterResult, setFilterResult] = useState<{ isClean: boolean; censoredText: string; triggeredWord?: string } | null>(null);
+
+  // Form states for creating new official announcements
+  const [pubTitle, setPubTitle] = useState('');
+  const [pubContent, setPubContent] = useState('');
+  const [pubType, setPubType] = useState<'系统重要防骗安全警示' | '平台功能优化通知' | '毕业季甩货专场活动' | '校友互助互惠福利'>('系统重要防骗安全警示');
+  const [pubPublisher, setPubPublisher] = useState('校园官方安防中心');
+  const [pubIsUrgent, setPubIsUrgent] = useState(false);
+
+  const handlePublishAnnouncementSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pubTitle.trim() || !pubContent.trim()) {
+      alert('请输入公告的标题与详细内容！');
+      return;
+    }
+
+    if (onAddAnnouncement) {
+      onAddAnnouncement({
+        id: `ann-${Date.now()}`,
+        title: pubTitle.trim(),
+        content: pubContent.trim(),
+        publisher: pubPublisher.trim() || '超级管理员群落办公室',
+        publishTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        type: pubType,
+        isUrgent: pubIsUrgent
+      });
+
+      // Reset form states
+      setPubTitle('');
+      setPubContent('');
+      setPubPublisher('校园官方安防中心');
+      setPubIsUrgent(false);
+    }
+  };
+
+  // Coupon form states
+  const [coupCode, setCoupCode] = useState('');
+  const [coupTitle, setCoupTitle] = useState('');
+  const [coupDiscount, setCoupDiscount] = useState<number>(10);
+  const [coupMinSpend, setCoupMinSpend] = useState<number>(30);
+  const [coupTargetUser, setCoupTargetUser] = useState('所有人');
+  const [coupExpiryTime, setCoupExpiryTime] = useState('2026-06-30');
+
+  const handlePublishCouponSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!coupCode.trim() || !coupTitle.trim()) {
+      alert('请输入优惠代金券的代码与标题！');
+      return;
+    }
+    if (coupDiscount <= 0 || coupMinSpend < 0) {
+      alert('满减减免金额必须大于 0，且消费门槛不得为负！');
+      return;
+    }
+
+    if (onAddCoupon) {
+      onAddCoupon({
+        id: `coup-${Date.now()}`,
+        code: coupCode.trim().toUpperCase(),
+        title: coupTitle.trim(),
+        discountAmount: Number(coupDiscount),
+        minSpend: Number(coupMinSpend),
+        targetUser: coupTargetUser,
+        isUsed: false,
+        expiryTime: coupExpiryTime || '2026-06-30',
+        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      });
+
+      // Reset
+      setCoupCode('');
+      setCoupTitle('');
+      setCoupDiscount(10);
+      setCoupMinSpend(30);
+      setCoupTargetUser('所有人');
+    }
+  };
 
   // High fidelity chart mock data (GMV trends, category count, campus distribution) (req-06, req-08)
   const gmvData = [
@@ -407,6 +498,376 @@ export default function AdminPanel({
                 </div>
               ))
             )}
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ==================================== 📢 校园公告发布管理专部 ==================================== */}
+      <div className="glass-panel p-5 rounded-2xl border border-white/5 space-y-4">
+        
+        <div className="border-b border-white/10 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+          <div className="flex items-center gap-2">
+            <Megaphone className="w-5 h-5 text-indigo-400 animate-bounce" />
+            <div>
+              <h4 className="text-sm font-black text-white">校园公共多级官方公告管理台 (超管专属发布权限)</h4>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                此看板公告只由拥有 admin 安全身份的账号可发布及注销撤回。发布后内容将即时广播渲染在全体用户 Marketplace 看板。
+              </p>
+            </div>
+          </div>
+          
+          <span className="text-[10px] bg-indigo-500/10 text-indigo-300 font-bold border border-indigo-550/20 px-2 rounded-md py-0.5 select-none shrink-0 self-start sm:self-auto">
+            管理员特权状态：认证生效中 ●
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-2">
+          
+          {/* 左侧：发布表单 */}
+          <form onSubmit={handlePublishAnnouncementSubmit} className="lg:col-span-7 bg-white/1 border border-white/3 p-4 rounded-xl space-y-4">
+            <h5 className="text-xs font-extrabold text-indigo-350 flex items-center gap-1.5 pb-1 border-b border-white/5 uppercase text-left dark:text-indigo-300">
+              ✍️ 新建官方通知/广播表单
+            </h5>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium">
+              
+              <div className="space-y-1 text-left">
+                <label className="text-slate-300 block font-semibold">公告分类属性 / 广播场景</label>
+                <select
+                  value={pubType}
+                  onChange={(e) => setPubType(e.target.value as any)}
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold cursor-pointer"
+                >
+                  <option value="系统重要防骗安全警示">系统重要防骗安全警示 (红底预闪)</option>
+                  <option value="平台功能优化通知">平台功能优化通知 (蓝底置顶)</option>
+                  <option value="毕业季甩货专场活动">毕业季甩货专场活动 (绿底置顶)</option>
+                  <option value="校友互助互惠福利">校友互助互惠福利 (黄底置顶)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-slate-300 block font-semibold">发布挂靠署名机构单位</label>
+                <input
+                  type="text"
+                  required
+                  value={pubPublisher}
+                  onChange={(e) => setPubPublisher(e.target.value)}
+                  placeholder="如：超管开发学长团队 / 校务安委"
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold"
+                />
+              </div>
+
+            </div>
+
+            <div className="space-y-1 text-xs text-left">
+              <label className="text-slate-300 block font-semibold">公告主要标题 (建议醒目并带有 emoji 前缀)</label>
+              <input
+                type="text"
+                required
+                value={pubTitle}
+                onChange={(e) => setPubTitle(e.target.value)}
+                placeholder="例如：🎓 毕业出清首周！高分政治英语免费送..."
+                className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold text-xs"
+              />
+            </div>
+
+            <div className="space-y-1 text-xs text-left">
+              <label className="text-slate-300 block font-semibold">通知主体正文详情 (支持换行，最长 500 字)</label>
+              <textarea
+                required
+                value={pubContent}
+                onChange={(e) => setPubContent(e.target.value)}
+                placeholder="请详述相关细则、时间地点限制或系统优化条款..."
+                rows={4}
+                className="w-full bg-slate-900 border border-white/10 rounded-lg p-2.5 text-white font-medium text-xs leading-relaxed"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-950/40 p-2.5 rounded-lg border border-white/3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="pubIsUrgent"
+                  checked={pubIsUrgent}
+                  onChange={(e) => setPubIsUrgent(e.target.checked)}
+                  className="w-4 h-4 text-indigo-550 rounded cursor-pointer"
+                />
+                <label htmlFor="pubIsUrgent" className="text-xs text-slate-300 font-bold cursor-pointer select-none">
+                  标定为「高能紧急预警」(将高亮红边闪烁突显)
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full sm:w-auto px-5 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-xl text-white text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 shadow-sm"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>立即挂载广播公告</span>
+              </button>
+            </div>
+
+          </form>
+
+          {/* 右侧：上架管理看板 */}
+          <div className="lg:col-span-5 bg-white/1 border border-white/3 p-4 rounded-xl flex flex-col justify-between text-left">
+            <div>
+              <h5 className="text-xs font-extrabold text-amber-400 dark:text-amber-300 flex items-center gap-1.5 pb-1 border-b border-white/5 uppercase">
+                📜 当前全校已置顶广播 ({announcements.length} 条)
+              </h5>
+              
+              <div className="space-y-2.5 mt-3 max-h-[290px] overflow-y-auto pr-1">
+                {announcements.length === 0 ? (
+                  <p className="text-center py-12 text-slate-500 text-xs font-medium">暂时没有全校公告。请用左侧表单新发一条！</p>
+                ) : (
+                  announcements.map((ann) => (
+                    <div 
+                      key={ann.id} 
+                      className={`p-2.5 rounded-lg text-xs text-left border ${
+                        ann.isUrgent 
+                          ? 'bg-rose-500/10 border-rose-500/20 shadow-md animate-pulse' 
+                          : 'bg-white/2 border-white/5'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-1">
+                        <div className="space-y-0.5 truncate">
+                          <span className="text-[8px] px-1 py-0.2 rounded bg-white/5 dark:bg-white/10 text-slate-400 font-bold block w-max max-w-full truncate">
+                            {ann.type}
+                          </span>
+                          <h6 className="font-bold text-white text-[11px] truncate block">
+                            {ann.title}
+                          </h6>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm('确定要在全校看板撤下/删除此官方公告吗？')) {
+                              if (onDeleteAnnouncement) onDeleteAnnouncement(ann.id);
+                            }
+                          }}
+                          className="px-1.5 py-0.5 text-rose-300 hover:text-white hover:bg-rose-600 bg-rose-500/10 border border-rose-500/20 rounded transition cursor-pointer text-[10px]"
+                          title="一键从全校卸除公告"
+                        >
+                          撤下
+                        </button>
+                      </div>
+
+                      <p className="text-[10px] text-slate-300 line-clamp-2 mt-1 select-text">
+                        {ann.content}
+                      </p>
+
+                      <div className="flex justify-between items-center text-[8px] text-slate-500 mt-1.5 font-bold pt-1 border-t border-white/3">
+                        <span>✍️署: {ann.publisher}</span>
+                        <span>⏱️: {ann.publishTime}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <p className="text-[9px] text-slate-500 italic mt-3 text-center">
+              * 提示：高亮标注紧急的公告在 Marketplace 会附送红底闪频闪烁引流提示，请合理使用。
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ==================================== 🎫 校园优惠代金券派发大厅 ==================================== */}
+      <div className="glass-panel p-5 rounded-2xl border border-white/5 space-y-4">
+        
+        <div className="border-b border-white/10 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-amber-400 animate-pulse" />
+            <div>
+              <h4 className="text-sm font-black text-white">校园特惠代金券指派中心 (超管专属派券)</h4>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                支持指派代金券给“所有人”或“特定买家账号”。买家在购买担保宝贝时，唯有满足使用金额门槛后方可勾选抵账。
+              </p>
+            </div>
+          </div>
+          
+          <span className="text-[10px] bg-amber-500/10 text-amber-300 font-bold border border-amber-500/20 px-2 rounded-md py-0.5 select-none shrink-0 self-start sm:self-auto">
+            系统出金状态：授额自由 ●
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-2">
+          
+          {/* 左侧：发券表单 */}
+          <form onSubmit={handlePublishCouponSubmit} className="lg:col-span-7 bg-white/1 border border-white/3 p-4 rounded-xl space-y-4">
+            <h5 className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5 pb-1 border-b border-white/5 uppercase text-left dark:text-amber-300">
+              ✍️ 新建优惠代金券并派发
+            </h5>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium">
+              
+              <div className="space-y-1 text-left">
+                <label className="text-slate-300 block font-semibold">指派对象 (特定买家或所有人)</label>
+                <select
+                  value={coupTargetUser}
+                  onChange={(e) => setCoupTargetUser(e.target.value)}
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold cursor-pointer"
+                >
+                  <option value="所有人">🔥 所有人通用 (全校可领)</option>
+                  {users.filter(u => u.role !== 'admin').map(u => (
+                    <option key={u.username} value={u.username}>👤 专属买家: {u.username} ({u.campus || '校区未知'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-slate-300 block font-semibold">优惠券唯一兑换码</label>
+                <input
+                  type="text"
+                  required
+                  value={coupCode}
+                  onChange={(e) => setCoupCode(e.target.value)}
+                  placeholder="如：HELLO10 / GRAD50"
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold placeholder-slate-500"
+                />
+              </div>
+
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-medium">
+              
+              <div className="space-y-1 text-left">
+                <label className="text-slate-300 block font-semibold">抵扣金额 (¥ 元)</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={coupDiscount}
+                  onChange={(e) => setCoupDiscount(Number(e.target.value))}
+                  placeholder="如：5, 10, 50"
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold"
+                />
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-slate-300 block font-semibold">使用满减条件 (满 ¥ 元打折)</label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  value={coupMinSpend}
+                  onChange={(e) => setCoupMinSpend(Number(e.target.value))}
+                  placeholder="如：30, 100"
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold"
+                />
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="text-slate-300 block font-semibold">到期失效截止日</label>
+                <input
+                  type="date"
+                  required
+                  value={coupExpiryTime}
+                  onChange={(e) => setCoupExpiryTime(e.target.value)}
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold"
+                />
+              </div>
+
+            </div>
+
+            <div className="space-y-1 text-xs text-left">
+              <label className="text-slate-300 block font-semibold">优惠券活动促销标题</label>
+              <input
+                type="text"
+                required
+                value={coupTitle}
+                onChange={(e) => setCoupTitle(e.target.value)}
+                placeholder="例如：🌸 潘茜茜毕业季高额答辩补贴券"
+                className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold placeholder-slate-500"
+              />
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-650 rounded-xl text-black font-black transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10"
+              >
+                <PlusCircle className="w-4 h-4 text-black" />
+                <span>立即审批派扣代金券</span>
+              </button>
+            </div>
+
+          </form>
+
+          {/* 右侧：发放列表 */}
+          <div className="lg:col-span-5 bg-white/1 border border-white/3 p-4 rounded-xl flex flex-col justify-between text-left">
+            <div>
+              <h5 className="text-xs font-extrabold text-indigo-400 dark:text-indigo-300 flex items-center gap-1.5 pb-1 border-b border-white/5 uppercase">
+                📜 已派券账本大表 ({coupons.length} 张)
+              </h5>
+              
+              <div className="space-y-2.5 mt-3 max-h-[300px] overflow-y-auto pr-1">
+                {coupons.length === 0 ? (
+                  <p className="text-center py-12 text-slate-500 text-xs font-medium">暂时没有发放的优惠券。请用左侧表单新发一张！</p>
+                ) : (
+                  coupons.map((c) => (
+                    <div 
+                      key={c.id} 
+                      className={`p-2.5 rounded-lg text-xs text-left border relative overflow-hidden ${
+                        c.isUsed 
+                          ? 'bg-slate-950/20 border-white/5 opacity-50' 
+                          : 'bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border-amber-550/20 shadow-sm'
+                      }`}
+                    >
+                      {/* Used watermark */}
+                      {c.isUsed && (
+                        <div className="absolute top-1 right-12 text-[10px] bg-slate-500/20 text-slate-400 px-1 rounded font-bold uppercase select-none border border-slate-500/10">
+                          已核销使用
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-start gap-1">
+                        <div className="space-y-0.5 truncate">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono text-amber-400 font-extrabold tracking-wider bg-amber-500/10 px-1 py-0.2 rounded border border-amber-500/20">
+                              {c.code}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-bold">
+                              满 ¥{c.minSpend} 减 ¥{c.discountAmount}
+                            </span>
+                          </div>
+                          <h6 className="font-bold text-white text-[11px] truncate block mt-0.5">
+                            {c.title}
+                          </h6>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`确定要注销并撤回优惠代码【${c.code}】吗？`)) {
+                              if (onDeleteCoupon) onDeleteCoupon(c.id);
+                            }
+                          }}
+                          className="px-1.5 py-0.5 text-rose-300 hover:text-white hover:bg-rose-600 bg-rose-500/10 border border-rose-500/20 rounded transition cursor-pointer text-[10px]"
+                          title="注销此代金券"
+                        >
+                          注销
+                        </button>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[9px] mt-2 text-slate-300 font-semibold pt-1 border-t border-white/5">
+                        <span className="text-amber-300/80 font-bold">🎯 指派给: {c.targetUser}</span>
+                        <span className="text-slate-400 font-mono text-[8px]">⏱️ 止: {c.expiryTime}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <p className="text-[9px] text-slate-500 italic mt-3 text-center">
+              * 管理员提示：优惠券在发放后，指定的用户（或全校）可以在下单时直接勾选并抵扣对应的订单款。
+            </p>
           </div>
 
         </div>

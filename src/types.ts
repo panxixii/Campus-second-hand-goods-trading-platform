@@ -30,6 +30,9 @@ export interface Product {
     endTime: string; // 秒杀结束时间
     originalPriceBeforeDiscount: number;
   };
+  isFlashSale?: boolean;
+  flashSalePrice?: number;
+  flashSaleEndTime?: string; // 降价结束时间
 }
 
 export interface Order {
@@ -54,6 +57,8 @@ export interface Order {
   cancellationReason?: string; // 取消原因
   cancellationRequestBy?: 'buyer' | 'seller' | 'timeout';
   verificationCode?: string; // 四位核销码 e.g., "9826"
+  couponDiscount?: number; // 优惠券扣减金额
+  couponCode?: string; // 优惠代码
 }
 
 export interface ChatMessage {
@@ -106,3 +111,36 @@ export interface ModerationTicket {
   timestamp: string;
   evidenceText?: string;
 }
+
+export interface UserAccount {
+  username: string;
+  role: 'user' | 'admin';
+  campus: string;
+  dorm: string;
+  major?: string;
+  studentId?: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  publisher: string;
+  publishTime: string;
+  type: '系统重要防骗安全警示' | '平台功能优化通知' | '毕业季甩货专场活动' | '校友互助互惠福利';
+  isUrgent?: boolean;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;         // e.g. "GRAD50", "DORM20"
+  title: string;        // e.g. "大四学长友情搬家券", "新生教务注册迎新礼"
+  discountAmount: number; // 减少金额 (¥)
+  minSpend: number;     // 满多少起用 (¥)
+  targetUser: string;   // 领取限定所有人，或者是具体买家用户名 "所有人" 或 "张同学"
+  isUsed: boolean;      // 买家是否已经核销过
+  expiryTime: string;   // 格式 yyyy-MM-dd
+  createdAt: string;    // 发券时间
+}
+
+

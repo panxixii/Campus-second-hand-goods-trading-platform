@@ -302,3 +302,59 @@ export const initialTickets: ModerationTicket[] = [
     evidenceText: '标题与详情直接显露“毕业设计查重100%全包、老手在线接高校软著代写”等极度违规、影响学术端正的敏感词！'
   }
 ];
+
+export const initialAnnouncements: any[] = [
+  {
+    id: 'ann-01',
+    title: '⚠️ 平台防骗核心公告：警惕线下「加微信直付」及「先款后货」骗局',
+    content: '最近收到部分同学投诉，有极少部分未验证身份用户试图引导添加私信，索要微信或支付宝先行转账定金。平台在此郑重提醒：全校面交一律在平台内做一键“担保代收保管”。卖家未确认发货核销前，款项由本校担保代管，面交满意后再展示出核销码！凡是强迫不走平台流程的，请立刻进入“后台管理举报”提交核查！',
+    publisher: '校务安全监督部',
+    publishTime: '2026-06-06 09:30:00',
+    type: '系统重要防骗安全警示',
+    isUrgent: true
+  },
+  {
+    id: 'ann-02',
+    title: '🚀 CampusTrade 校友内网 3.0 重大更新升级：足迹收藏、秒杀时钟上线',
+    content: '亲爱的高校校友们，经过技术团队挑灯夜战，全新的内置足迹浏览记录追踪器、个人心愿收藏夹以及卖家「限时降价闪电秒杀」特惠引流模块现已被热部署到本应用！买家在宝贝详情页中可随时点击“收藏”，且在发布模块中卖家可自定降价生效期限和促售价。我们会继续深耕校园净土，为大家毕业出清保驾护航！',
+    publisher: '超管开发学长团队',
+    publishTime: '2026-06-05 15:40:00',
+    type: '平台功能优化通知',
+    isUrgent: false
+  },
+  {
+    id: 'ann-03',
+    title: '🎓 毕业生重磅福利：毕业生「榕园/中苑」集中设摊出清活动召集令',
+    content: '为协助大四学长学姐搬家出清、低碳循环，将于 6月8日至6月12日 在中苑5号楼宿舍前、榕园便利店右侧空地举行“毕业带不走，低价赠舍友”地摊对接会。大家可线上扫码预订地摊资格或在我们的 APP 广场快速挂牌并填写自提说明，活动期间校务将提供电源和打包纸箱供给，欢迎组团面销！',
+    publisher: '校学生会生活部',
+    publishTime: '2026-06-04 11:20:00',
+    type: '毕业季甩货专场活动',
+    isUrgent: false
+  }
+];
+
+export const initialCoupons: any[] = [
+  {
+    id: 'coup-01',
+    code: 'GRAD5',
+    title: '🎓 毕业季回血专项代金券',
+    discountAmount: 5,
+    minSpend: 20,
+    targetUser: '所有人',
+    isUsed: false,
+    expiryTime: '2026-07-06',
+    createdAt: '2026-06-06 10:00:00'
+  },
+  {
+    id: 'coup-02',
+    code: 'DORM20',
+    title: '🏠 校院自提专用补贴券',
+    discountAmount: 20,
+    minSpend: 80,
+    targetUser: '所有人',
+    isUsed: false,
+    expiryTime: '2026-06-30',
+    createdAt: '2026-06-06 10:05:00'
+  }
+];
+
