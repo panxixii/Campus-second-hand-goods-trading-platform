@@ -16,6 +16,7 @@ interface ChatProps {
   messages: ChatMessage[];
   products: Product[];
   onSendMessage: (receiver: string, text: string, linkedProd?: Product) => void;
+  onMarkAsRead?: (sender: string) => void;
   selectedProductToLink?: Product | null;
   onClearLinkedProduct: () => void;
 }
@@ -24,6 +25,7 @@ export default function ChatWorkspace({
   messages,
   products,
   onSendMessage,
+  onMarkAsRead,
   selectedProductToLink,
   onClearLinkedProduct
 }: ChatProps) {
@@ -34,6 +36,13 @@ export default function ChatWorkspace({
   // Local Blacklist state (req-36)
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [showBlacklistNotification, setShowBlacklistNotification] = useState(false);
+
+  // Trigger synchronization of unread messages to read
+  useEffect(() => {
+    if (onMarkAsRead) {
+      onMarkAsRead(activeSession);
+    }
+  }, [activeSession, messages, onMarkAsRead]);
 
   // Auto scroll logic helper
   const chatRef = React.useRef<HTMLDivElement>(null);
@@ -116,6 +125,7 @@ export default function ChatWorkspace({
             {['潘茜茜', '张皓越', '周亦菲'].map(user => {
               const lastMsg = messages.filter(m => m.chatWith === user).pop();
               const isBlocked = blacklist.includes(user);
+              const unreadCount = messages.filter(m => m.chatWith === user && m.sender === user && m.isRead === false).length;
 
               return (
                 <button
@@ -139,11 +149,19 @@ export default function ChatWorkspace({
                     </div>
                   </div>
 
-                  {isBlocked && (
+                  {isBlocked ? (
                     <span className="bg-rose-500/20 text-rose-300 px-1 py-0.5 rounded text-[9px] font-extrabold shrink-0 border border-rose-500/20">
                       BLOCK
                     </span>
-                  )}
+                  ) : unreadCount > 0 ? (
+                    <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-extrabold text-[9px] flex items-center justify-center shrink-0 animate-pulse">
+                      {unreadCount}
+                    </span>
+                  ) : lastMsg ? (
+                    <span className="text-[9px] text-slate-500 shrink-0">
+                      {lastMsg.timestamp.split(' ')[1].substring(0, 5)}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
@@ -269,6 +287,20 @@ export default function ChatWorkspace({
                       </div>
                     )}
                   </div>
+
+                  {isMe && (
+                    <div className="text-[10px] text-right text-slate-400 font-medium select-none flex items-center justify-end gap-0.5 mt-0.5">
+                      {msg.isRead ? (
+                        <span className="text-emerald-400 font-extrabold flex items-center gap-0.5">
+                          <Check className="w-3 h-3 text-emerald-400 inline" />已读
+                        </span>
+                      ) : (
+                        <span className="text-slate-500 flex items-center gap-0.5">
+                          未读
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

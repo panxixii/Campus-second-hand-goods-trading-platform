@@ -571,11 +571,48 @@ export default function App() {
       sender: senderName,
       text: text,
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      linkedProduct: linkedProd
+      linkedProduct: linkedProd,
+      isRead: false
     };
 
     const updated = [...messages, newMsg];
     saveAllToStorage(products, orders, updated, posts, seekingList, tickets);
+
+    // 自动模拟对方在大约 1.5 秒后阅读了本条消息并将其置为“已读”状态
+    setTimeout(() => {
+      setMessages(currentMessages => {
+        const hasUnreadSent = currentMessages.some(
+          m => m.chatWith === receiver && m.sender === senderName && m.isRead === false
+        );
+        if (hasUnreadSent) {
+          const nextMsgs = currentMessages.map(m => {
+            if (m.chatWith === receiver && m.sender === senderName && m.isRead === false) {
+              return { ...m, isRead: true };
+            }
+            return m;
+          });
+          localStorage.setItem('campustrade_messages_v2', JSON.stringify(nextMsgs));
+          return nextMsgs;
+        }
+        return currentMessages;
+      });
+    }, 1500);
+  };
+
+  // 💬 10.1 标记某会话所有对方发来的未读消息为已读
+  const handleMarkAsRead = (peerName: string) => {
+    const hasUnread = messages.some(
+      m => m.chatWith === peerName && m.sender === peerName && m.isRead === false
+    );
+    if (hasUnread) {
+      const updated = messages.map(m => {
+        if (m.chatWith === peerName && m.sender === peerName && m.isRead === false) {
+          return { ...m, isRead: true };
+        }
+        return m;
+      });
+      saveAllToStorage(products, orders, updated, posts, seekingList, tickets);
+    }
   };
 
   // 📊 11. 敏感词违规工单追加/封停
@@ -999,7 +1036,13 @@ export default function App() {
               }`}
             >
               💬 担保私聊
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full animate-ping"></span>
+              {messages.filter(m => m.sender !== (currentUser?.username || '我 (当前学生)') && m.sender !== '系统风控监测' && m.isRead === false).length > 0 ? (
+                <span className="bg-rose-500 text-white font-extrabold px-1.5 py-0.5 rounded-full text-[9px] min-w-4 text-center leading-none animate-pulse shrink-0">
+                  {messages.filter(m => m.sender !== (currentUser?.username || '我 (当前学生)') && m.sender !== '系统风控监测' && m.isRead === false).length}
+                </span>
+              ) : (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full animate-ping"></span>
+              )}
             </button>
 
             {/* 担保结算与时间轴 */}
@@ -1079,6 +1122,7 @@ export default function App() {
             messages={messages}
             products={products}
             onSendMessage={handleSendMessage}
+            onMarkAsRead={handleMarkAsRead}
             selectedProductToLink={selectedProductToLink}
             onClearLinkedProduct={() => setSelectedProductToLink(null)}
           />

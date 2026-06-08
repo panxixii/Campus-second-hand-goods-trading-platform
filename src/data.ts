@@ -195,14 +195,16 @@ export const initialChats: ChatMessage[] = [
     chatWith: '潘茜茜',
     sender: '潘茜茜',
     text: '同学你好，对这个考研高数题感兴趣吗？这是我去年亲手划重点的复习资料。',
-    timestamp: '2026-06-06 09:00:00'
+    timestamp: '2026-06-06 09:00:00',
+    isRead: true
   },
   {
     id: 'msg-02',
     chatWith: '潘茜茜',
     sender: '黄嘉敏',
     text: '是的！潘师姐，请问里面的1000题全写完了吗？还有高分路线图包含几项核心要点？',
-    timestamp: '2026-06-06 09:02:00'
+    timestamp: '2026-06-06 09:02:00',
+    isRead: true
   },
   {
     id: 'msg-03',
@@ -210,21 +212,48 @@ export const initialChats: ChatMessage[] = [
     sender: '系统风控',
     text: '❗平台安全监测警示：线下当面付存在欺诈漏洞！请使用平台内置的“担保支付”冻结暂存资金，见面提货后扫码核销。任何诱导直接加微信转账的行为均涉嫌欺诈，请小心。',
     timestamp: '2026-06-06 09:02:05',
-    isSystem: true
+    isSystem: true,
+    isRead: true
   },
   {
     id: 'msg-04',
     chatWith: '潘茜茜',
     sender: '潘茜茜',
-    text: '1000题只有前三章有铅笔做的痕迹，其余全新。高分路线图是我手绘画在答题本末页的，总结了高等数学和线性代数的重点。',
-    timestamp: '2026-06-06 09:04:00'
+    text: '1000题只有前三章有铅笔做的痕迹，其余全新。高分路线图是我手绘画在答题本末页的，总结了高等数学 and 线性代数的重点。',
+    timestamp: '2026-06-06 09:04:00',
+    isRead: true
   },
   {
     id: 'msg-05',
     chatWith: '潘茜茜',
     sender: '黄嘉敏',
     text: '太好了，我已经下单并进行了平台担保支付（资金已在平台托管），我们在中苑便利店门口面交可以直接核销！',
-    timestamp: '2026-06-06 09:12:50'
+    timestamp: '2026-06-06 09:12:50',
+    isRead: true
+  },
+  {
+    id: 'msg-06',
+    chatWith: '潘茜茜',
+    sender: '潘茜茜',
+    text: '师弟，我等下四点能准时到榕园便利店，我穿白色外套哈，你到了在群里或者直接私信呼我。',
+    timestamp: '2026-06-08 09:15:00',
+    isRead: false
+  },
+  {
+    id: 'msg-07',
+    chatWith: '周亦菲',
+    sender: '周亦菲',
+    text: '同学你好，自行车的钥匙我给你找出来了，你什么时候过来骑走？可以直接在平台付担保金锁订单。',
+    timestamp: '2026-06-08 09:20:00',
+    isRead: false
+  },
+  {
+    id: 'msg-08',
+    chatWith: '张皓越',
+    sender: '张皓越',
+    text: '鼠标的防滑贴我也一起整包送你吧，下午在中苑3号楼楼下见！',
+    timestamp: '2026-06-08 10:10:00',
+    isRead: false
   }
 ];
 

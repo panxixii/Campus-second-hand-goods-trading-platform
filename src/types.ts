@@ -69,6 +69,7 @@ export interface ChatMessage {
   timestamp: string;
   linkedProduct?: Product; // 关联商品卡片一键引用
   isSystem?: boolean; // 系统风控预警提示
+  isRead?: boolean; // 是否已读
 }
 
 export interface CommunityPost {
